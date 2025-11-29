@@ -1,0 +1,57 @@
+{
+  "store": {
+    "name": "GreenMart Superstore",
+    "address": "221 Baker Street, London",
+    "city": "London",
+    "country": "UK",
+    "category": "groceries"
+  },
+  "date": "2025-11-28T18:45:00Z",
+  "currency": "USD",
+  "paymentMethod": "Visa 4021",
+  "latitude": 51.5237,
+  "longitude": -0.1585,
+  "items": [
+    {
+      "sku": "APL-001",
+      "name": "Organic Apples",
+      "translatedName": "Органические яблоки",
+      "qty": 1,
+      "price": 6.5,
+      "category": "produce"
+    },
+    {
+      "sku": "BRED-004",
+      "name": "Sourdough Bread",
+      "qty": 1,
+      "price": 4.25,
+      "category": "bakery"
+    },
+    {
+      "sku": "CSH-442",
+      "name": "Arabica Coffee Beans",
+      "qty": 1,
+      "price": 14.0,
+      "category": "beverages"
+    },
+    {
+      "sku": "CLN-293",
+      "name": "Eco Dishwasher Tabs",
+      "qty": 1,
+      "price": 9.8,
+      "category": "household"
+    },
+    {
+      "sku": "VEG-903",
+      "name": "Baby Spinach",
+      "qty": 2,
+      "price": 3.9,
+      "category": "produce"
+    }
+  ],
+  "tax": 5.4,
+  "subtotal": 72.45,
+  "serviceFee": 1.5,
+  "total": 82.45
+}
+
