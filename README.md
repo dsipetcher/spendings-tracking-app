@@ -32,11 +32,11 @@ Ensure Android/iOS toolchains are installed (`flutter doctor`). On Windows, Deve
 
 ### Environment variables
 
-To enable cloud translation fallback (used when ML Kit lacks a language), provide a Google Cloud
-Translation API key via Dart define:
+To enable cloud translation fallback (used when ML Kit lacks a language), provide a
+[DeepL](https://www.deepl.com/pro-api) API key via Dart define:
 
 ```powershell
-flutter run --dart-define=TRANSLATE_API_KEY=your_api_key_here
+flutter run --dart-define=DEEPL_API_KEY=your_deepl_key
 ```
 
 If the key is omitted, the app still works but will skip translation for unsupported languages.
@@ -50,6 +50,8 @@ If the key is omitted, the app still works but will skip translation for unsuppo
   survive restarts without a backend.
 - **Manual control**: Users can edit merchants, notes, categories, totals, or disable original image
   storage in Settings to save disk space.
+- **Multi-currency view**: Each receipt, history row, and dashboard widget shows the original amount,
+  a base currency (USD/EUR selectable) and the user’s personal currency using cached forex rates.
 - **Original image audit**: Every saved operation can link back to the captured photo, viewable from
   the receipt detail screen if the feature is enabled.
 

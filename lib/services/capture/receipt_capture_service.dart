@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../features/receipts/domain/models/receipt_models.dart';
+import '../currency/currency_resolver.dart';
 import 'cloud_translation_service.dart';
 
 class ReceiptCaptureService {
@@ -43,7 +44,11 @@ class ReceiptCaptureService {
     final store = _parseStore(recognizedText);
     final date = _parseDate(rawText) ?? DateTime.now();
     final items = _parseLineItems(recognizedText);
-    final totals = _extractTotals(recognizedText, items);
+    final totals = _extractTotals(
+      recognizedText,
+      items,
+      sourceLanguage: sourceLanguage,
+    );
 
     final translatedItems = await _translateItems(
       items,
@@ -251,7 +256,11 @@ class ReceiptCaptureService {
     return items;
   }
 
-  _TotalsResult _extractTotals(RecognizedText text, List<LineItem> items) {
+  _TotalsResult _extractTotals(
+    RecognizedText text,
+    List<LineItem> items, {
+    required String? sourceLanguage,
+  }) {
     double? subtotal = items.isEmpty
         ? null
         : items.fold<double>(
@@ -263,11 +272,13 @@ class ReceiptCaptureService {
     double? serviceFee;
     String? currency;
     String? paymentMethod;
+    String? detectedSymbol;
 
     final lines = text.text.split('\n');
     for (final line in lines) {
       final normalized = line.toLowerCase();
       currency ??= _detectCurrency(line);
+      detectedSymbol ??= _detectCurrencySymbol(line);
       if (normalized.contains('tax') ||
           normalized.contains('nds') ||
           normalized.contains('vat') ||
@@ -290,13 +301,20 @@ class ReceiptCaptureService {
       paymentMethod ??= _detectPaymentMethod(normalized);
     }
 
+    final resolvedCurrency = currency ??
+        CurrencyResolver.resolveCurrency(
+          sourceLanguageCode: sourceLanguage,
+          detectedCurrencySymbol: detectedSymbol,
+        );
+
     return _TotalsResult(
       subtotal: subtotal,
       total: total,
       tax: tax,
       serviceFee: serviceFee,
-      currency: currency,
+      currency: resolvedCurrency,
       paymentMethod: paymentMethod,
+      detectedSymbol: detectedSymbol,
     );
   }
 
@@ -357,6 +375,17 @@ class ReceiptCaptureService {
     if (normalized.contains('KZT')) return 'KZT';
     if (normalized.contains('RUB') || normalized.contains('₽')) return 'RUB';
     if (normalized.contains('GBP') || normalized.contains('£')) return 'GBP';
+    return null;
+  }
+
+  String? _detectCurrencySymbol(String line) {
+    if (line.contains('֏')) return '֏';
+    if (line.contains('₽')) return '₽';
+    if (line.contains('€')) return '€';
+    if (line.contains('£')) return '£';
+    if (line.contains('¥')) return '¥';
+    if (line.contains(r'$')) return r'$';
+    if (line.contains('₸')) return '₸';
     return null;
   }
 
@@ -442,6 +471,7 @@ class _TotalsResult {
     required this.serviceFee,
     required this.currency,
     required this.paymentMethod,
+    required this.detectedSymbol,
   });
 
   final double? subtotal;
@@ -450,6 +480,7 @@ class _TotalsResult {
   final double? serviceFee;
   final String? currency;
   final String? paymentMethod;
+  final String? detectedSymbol;
 }
 
 class CategoryEngine {

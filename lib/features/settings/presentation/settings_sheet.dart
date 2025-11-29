@@ -1,3 +1,4 @@
+import 'package:currency_picker/currency_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,6 +42,42 @@ class SettingsSheet extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 20),
+          Text('Base currency', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'USD', label: Text('USD')),
+              ButtonSegment(value: 'EUR', label: Text('EUR')),
+            ],
+            selected: {settings.baseCurrency},
+            onSelectionChanged: (selection) =>
+                controller.setBaseCurrency(selection.first),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Personal currency'),
+            subtitle: Text(
+              settings.personalCurrency,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            trailing: TextButton(
+              onPressed: () => showCurrencyPicker(
+                context: context,
+                showFlag: true,
+                showSearchField: true,
+                onSelect: (currency) =>
+                    controller.setPersonalCurrency(currency.code),
+              ),
+              child: const Text('Change'),
+            ),
+          ),
+          Text(
+            'Spending totals are shown in the original receipt currency, your base (USD/EUR) '
+            'and your personal currency for easier comparison.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
         ],
       ),
     );

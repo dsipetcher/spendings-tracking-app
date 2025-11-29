@@ -1,8 +1,8 @@
 class Env {
   const Env._();
 
-  static const translateApiKey =
-      String.fromEnvironment('TRANSLATE_API_KEY', defaultValue: '');
+  static const libreTranslateUrl =
+      String.fromEnvironment('LIBRETRANSLATE_URL', defaultValue: '');
 
-  static bool get hasTranslateApiKey => translateApiKey.isNotEmpty;
+  static bool get hasLibreTranslateUrl => libreTranslateUrl.isNotEmpty;
 }

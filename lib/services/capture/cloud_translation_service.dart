@@ -10,49 +10,58 @@ class CloudTranslationService {
 
   final http.Client _client;
 
-  bool get isEnabled => Env.hasTranslateApiKey;
+  bool get isEnabled => true;
 
   Future<List<String>> translate(
     List<String> texts, {
     required String targetLanguage,
     String? sourceLanguage,
   }) async {
-    if (!isEnabled || texts.isEmpty) return texts;
+    if (texts.isEmpty) return texts;
 
-    final uri = Uri.https(
-      'translation.googleapis.com',
-      '/language/translate/v2',
-      {'key': Env.translateApiKey},
-    );
+    final uri = Uri.https('api.mymemory.translated.net', '/get', {
+      'langpair':
+          '${_normalizeLanguage(sourceLanguage) ?? 'auto'}|${_normalizeLanguage(targetLanguage) ?? 'en'}',
+      'de': 'public@email.test',
+      'q': texts.first,
+    });
 
-    final payload = {
-      'q': texts,
-      if (sourceLanguage != null) 'source': sourceLanguage,
-      'target': targetLanguage,
-      'format': 'text',
-    };
-
-    final response = await _client.post(
-      uri,
-      headers: {'Content-Type': 'application/json; charset=utf-8'},
-      body: jsonEncode(payload),
-    );
-
+    final response = await _client.get(uri);
     if (response.statusCode != 200) {
       throw Exception(
-        'Cloud translation failed (${response.statusCode}): ${response.body}',
+        'MyMemory translation failed (${response.statusCode}): ${response.body}',
       );
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final data = body['data'] as Map<String, dynamic>;
-    final translations = data['translations'] as List<dynamic>;
-    return translations
-        .map((e) => (e as Map<String, dynamic>)['translatedText'] as String)
-        .toList();
+    final translated = (body['responseData']
+        as Map<String, dynamic>)['translatedText'] as String;
+    return [translated];
   }
 
   Future<void> close() async {
     _client.close();
+  }
+
+  static const _languageMap = {
+    'en': 'en',
+    'ru': 'ru',
+    'de': 'de',
+    'fr': 'fr',
+    'es': 'es',
+    'pt': 'pt',
+    'it': 'it',
+    'tr': 'tr',
+    'uk': 'uk',
+    'kk': 'kk',
+    'hy': 'hy',
+    'ja': 'ja',
+    'zh': 'zh',
+  };
+
+  String? _normalizeLanguage(String? input) {
+    if (input == null) return null;
+    final code = input.toLowerCase();
+    return _languageMap[code] ?? code;
   }
 }

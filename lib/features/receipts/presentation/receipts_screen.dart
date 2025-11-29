@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/date_extensions.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../services/currency/currency_converter.dart';
+import '../../../services/currency/exchange_rate_service.dart';
+import '../../settings/application/settings_controller.dart';
 import '../application/receipts_controller.dart';
 import '../domain/models/receipt_models.dart';
 import 'receipt_detail_screen.dart';
@@ -140,6 +143,9 @@ class _ReceiptCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsControllerProvider);
+    final ratesAsync = ref.watch(exchangeRatesProvider);
+
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -181,18 +187,83 @@ class _ReceiptCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Text(
-                    formatCurrency(
-                      receipt.flowType == MoneyFlowType.expense
-                          ? -receipt.total
-                          : receipt.total,
-                      currency: receipt.currency,
+                  ratesAsync.when(
+                    data: (ratesData) {
+                      final amounts = buildCurrencyDisplay(
+                        amount: receipt.total,
+                        currency: receipt.currency,
+                        ratesData: ratesData,
+                        settings: settings,
+                      );
+                      final originalValue =
+                          receipt.flowType == MoneyFlowType.expense
+                              ? -amounts.originalAmount
+                              : amounts.originalAmount;
+                      final baseValue =
+                          receipt.flowType == MoneyFlowType.expense
+                              ? -(amounts.baseAmount ?? 0)
+                              : amounts.baseAmount;
+                      final personalValue =
+                          receipt.flowType == MoneyFlowType.expense
+                              ? -(amounts.personalAmount ?? 0)
+                              : amounts.personalAmount;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            formatCurrency(
+                              originalValue,
+                              currency: amounts.originalCurrency,
+                            ),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: receipt.flowType == MoneyFlowType.expense
+                                  ? Colors.redAccent
+                                  : Colors.teal,
+                            ),
+                          ),
+                          if (baseValue != null)
+                            Text(
+                              '≈ ${formatCurrency(baseValue, currency: amounts.baseCurrency)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          if (personalValue != null &&
+                              settings.personalCurrency != amounts.baseCurrency)
+                            Text(
+                              '≈ ${formatCurrency(personalValue, currency: amounts.personalCurrency)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      );
+                    },
+                    loading: () => Text(
+                      formatCurrency(
+                        receipt.flowType == MoneyFlowType.expense
+                            ? -receipt.total
+                            : receipt.total,
+                        currency: receipt.currency,
+                      ),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: receipt.flowType == MoneyFlowType.expense
+                            ? Colors.redAccent
+                            : Colors.teal,
+                      ),
                     ),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: receipt.flowType == MoneyFlowType.expense
-                          ? Colors.redAccent
-                          : Colors.teal,
+                    error: (error, _) => Text(
+                      formatCurrency(
+                        receipt.flowType == MoneyFlowType.expense
+                            ? -receipt.total
+                            : receipt.total,
+                        currency: receipt.currency,
+                      ),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: receipt.flowType == MoneyFlowType.expense
+                            ? Colors.redAccent
+                            : Colors.teal,
+                      ),
                     ),
                   ),
                 ],

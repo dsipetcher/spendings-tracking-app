@@ -12,6 +12,7 @@ import 'package:spendings_tracking_app/app.dart';
 import 'package:spendings_tracking_app/core/constants/demo_receipts.dart';
 import 'package:spendings_tracking_app/features/receipts/application/receipts_controller.dart';
 import 'package:spendings_tracking_app/features/receipts/domain/models/receipt_models.dart';
+import 'package:spendings_tracking_app/services/currency/exchange_rate_service.dart';
 
 void main() {
   testWidgets('Home shell renders overview and receipts tabs', (tester) async {
@@ -19,6 +20,13 @@ void main() {
       ProviderScope(
         overrides: [
           receiptsProvider.overrideWith(_FakeReceiptsController.new),
+          exchangeRatesProvider.overrideWith(
+            (ref) async => ExchangeRatesData(
+              baseCurrency: 'USD',
+              rates: {'EUR': 0.92, 'RUB': 90},
+              updatedAt: DateTime.now(),
+            ),
+          ),
         ],
         child: const SpendingsApp(),
       ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -39,13 +40,13 @@ class ReceiptRepository {
 
   Future<void> upsertReceipt(Receipt receipt) async {
     final box = await _store;
-    await box.put(receipt.id, receipt.toJson());
+    await box.put(receipt.id, _serialize(receipt));
   }
 
   Future<void> upsertMany(Iterable<Receipt> receipts) async {
     final box = await _store;
     await box.putAll({
-      for (final receipt in receipts) receipt.id: receipt.toJson(),
+      for (final receipt in receipts) receipt.id: _serialize(receipt),
     });
   }
 
@@ -53,6 +54,10 @@ class ReceiptRepository {
     final box = await _store;
     await box.delete(receiptId);
   }
+
+  Map<String, dynamic> _serialize(Receipt receipt) => Map<String, dynamic>.from(
+        jsonDecode(jsonEncode(receipt.toJson())) as Map<String, dynamic>,
+      );
 
   Future<void> seedDemoData() async {
     await upsertMany(DemoReceipts.initialPool);
@@ -65,10 +70,9 @@ class ReceiptRepository {
 
   List<Receipt> _readBox(Box<Map> box) {
     final receipts = box.values
-        .whereType<Map>()
         .map(
           (entry) => Receipt.fromJson(
-            Map<String, dynamic>.from(entry as Map),
+            Map<String, dynamic>.from(entry),
           ),
         )
         .toList();

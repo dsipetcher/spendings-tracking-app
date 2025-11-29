@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/date_extensions.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../services/currency/currency_converter.dart';
+import '../../../services/currency/exchange_rate_service.dart';
+import '../../settings/application/settings_controller.dart';
 import '../application/receipts_controller.dart';
 import '../domain/models/receipt_models.dart';
 
@@ -192,13 +195,16 @@ class _DetailHeader extends StatelessWidget {
   }
 }
 
-class _TotalsCard extends StatelessWidget {
+class _TotalsCard extends ConsumerWidget {
   const _TotalsCard({required this.receipt});
 
   final Receipt receipt;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsControllerProvider);
+    final ratesAsync = ref.watch(exchangeRatesProvider);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -236,6 +242,38 @@ class _TotalsCard extends StatelessWidget {
                 value: -receipt.discount!,
                 currency: receipt.currency,
               ),
+            const Divider(height: 32),
+            ratesAsync.when(
+              data: (ratesData) {
+                final conversions = buildCurrencyDisplay(
+                  amount: receipt.total,
+                  currency: receipt.currency,
+                  ratesData: ratesData,
+                  settings: settings,
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (conversions.baseAmount != null)
+                      _ConvertedRow(
+                        label: '≈ ${conversions.baseCurrency}',
+                        value: conversions.baseAmount!,
+                        currency: conversions.baseCurrency,
+                      ),
+                    if (conversions.personalAmount != null &&
+                        conversions.personalCurrency !=
+                            conversions.baseCurrency)
+                      _ConvertedRow(
+                        label: '≈ ${conversions.personalCurrency}',
+                        value: conversions.personalAmount!,
+                        currency: conversions.personalCurrency,
+                      ),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
@@ -262,6 +300,35 @@ class _TotalRow extends StatelessWidget {
           Text(
             formatCurrency(value, currency: currency),
             style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConvertedRow extends StatelessWidget {
+  const _ConvertedRow({
+    required this.label,
+    required this.value,
+    required this.currency,
+  });
+
+  final String label;
+  final double value;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            formatCurrency(value, currency: currency),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
       ),

@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/date_extensions.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../services/currency/currency_converter.dart';
+import '../../../services/currency/exchange_rate_service.dart';
 import '../../receipts/application/receipts_controller.dart';
 import '../../receipts/domain/models/receipt_models.dart';
+import '../../settings/application/settings_controller.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -20,24 +23,48 @@ class DashboardScreen extends ConsumerWidget {
       error: (error, stackTrace) =>
           Center(child: Text('Failed to load receipts: $error')),
       data: (receipts) {
-        final analytics = _AnalyticsSnapshot.fromReceipts(receipts);
-        final currency = receipts.isEmpty ? 'USD' : receipts.first.currency;
-
-        return RefreshIndicator(
-          onRefresh: () async =>
-              Future<void>.delayed(const Duration(milliseconds: 600)),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-            children: [
-              _BalanceCard(analytics: analytics, currency: currency),
-              const SizedBox(height: 20),
-              _WeeklyChart(analytics: analytics, currency: currency),
-              const SizedBox(height: 20),
-              _CategoryHighlights(analytics: analytics, currency: currency),
-              const SizedBox(height: 20),
-              _RecentActivity(receipts: receipts, currency: currency),
-            ],
-          ),
+        final settings = ref.watch(settingsControllerProvider);
+        final ratesAsync = ref.watch(exchangeRatesProvider);
+        return ratesAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) =>
+              Center(child: Text('Failed to load rates: $error')),
+          data: (ratesData) {
+            final analytics = _AnalyticsSnapshot.fromReceipts(
+              receipts,
+              ratesData,
+              settings,
+            );
+            return RefreshIndicator(
+              onRefresh: () async =>
+                  Future<void>.delayed(const Duration(milliseconds: 600)),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                children: [
+                  _BalanceCard(
+                    analytics: analytics,
+                    currency: settings.baseCurrency,
+                  ),
+                  const SizedBox(height: 20),
+                  _WeeklyChart(
+                    analytics: analytics,
+                    currency: settings.baseCurrency,
+                  ),
+                  const SizedBox(height: 20),
+                  _CategoryHighlights(
+                    analytics: analytics,
+                    currency: settings.baseCurrency,
+                  ),
+                  const SizedBox(height: 20),
+                  _RecentActivity(
+                    receipts: receipts,
+                    currency: settings.baseCurrency,
+                    rates: ratesData,
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -260,10 +287,15 @@ class _CategoryHighlights extends StatelessWidget {
 }
 
 class _RecentActivity extends StatelessWidget {
-  const _RecentActivity({required this.receipts, required this.currency});
+  const _RecentActivity({
+    required this.receipts,
+    required this.currency,
+    required this.rates,
+  });
 
   final List<Receipt> receipts;
   final String currency;
+  final ExchangeRatesData rates;
 
   @override
   Widget build(BuildContext context) {
@@ -281,26 +313,49 @@ class _RecentActivity extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 title: Text(receipt.store.name),
                 subtitle: Text(receipt.createdAt.toReceiptLabel()),
-                trailing: Text(
-                  formatCurrency(
-                    receipt.flowType == MoneyFlowType.expense
-                        ? -receipt.total
-                        : receipt.total,
-                    currency: receipt.currency,
-                  ),
-                  style: TextStyle(
-                    color: receipt.flowType == MoneyFlowType.expense
-                        ? Colors.redAccent
-                        : Colors.teal,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                trailing: _buildAmount(receipt),
               ),
               const Divider(),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAmount(Receipt receipt) {
+    final converted = convertCurrency(
+      amount: receipt.total,
+      from: receipt.currency,
+      to: currency,
+      ratesData: rates,
+    );
+    final value = receipt.flowType == MoneyFlowType.expense
+        ? -(converted ?? receipt.total)
+        : (converted ?? receipt.total);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          formatCurrency(value, currency: currency),
+          style: TextStyle(
+            color: receipt.flowType == MoneyFlowType.expense
+                ? Colors.redAccent
+                : Colors.teal,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        if (receipt.currency != currency)
+          Text(
+            formatCurrency(
+              receipt.flowType == MoneyFlowType.expense
+                  ? -receipt.total
+                  : receipt.total,
+              currency: receipt.currency,
+            ),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+      ],
     );
   }
 }
@@ -320,21 +375,46 @@ class _AnalyticsSnapshot {
 
   double get netBalance => totalIncome - totalExpenses;
 
-  factory _AnalyticsSnapshot.fromReceipts(List<Receipt> receipts) {
+  factory _AnalyticsSnapshot.fromReceipts(
+    List<Receipt> receipts,
+    ExchangeRatesData ratesData,
+    SettingsState settings,
+  ) {
+    double convert(double amount, String currency) {
+      if (currency == settings.baseCurrency) return amount;
+      return convertCurrency(
+            amount: amount,
+            from: currency,
+            to: settings.baseCurrency,
+            ratesData: ratesData,
+          ) ??
+          amount;
+    }
+
     final expenses = receipts
         .where((receipt) => receipt.flowType == MoneyFlowType.expense)
-        .fold<double>(0, (value, receipt) => value + receipt.total);
+        .fold<double>(
+          0,
+          (value, receipt) => value + convert(receipt.total, receipt.currency),
+        );
     final income = receipts
         .where((receipt) => receipt.flowType == MoneyFlowType.income)
-        .fold<double>(0, (value, receipt) => value + receipt.total);
+        .fold<double>(
+          0,
+          (value, receipt) => value + convert(receipt.total, receipt.currency),
+        );
 
     final categoryTotals = <SpendingCategory, double>{};
     for (final receipt in receipts) {
       for (final item in receipt.items) {
+        final amount = convert(
+          item.unitPrice * item.quantity,
+          receipt.currency,
+        );
         categoryTotals.update(
           item.category,
-          (value) => value + (item.unitPrice * item.quantity),
-          ifAbsent: () => item.unitPrice * item.quantity,
+          (value) => value + amount,
+          ifAbsent: () => amount,
         );
       }
     }
@@ -343,12 +423,18 @@ class _AnalyticsSnapshot {
     final lastWeek = List.generate(7, (index) {
       final date = now.subtract(Duration(days: 6 - index));
       final dayTotal = receipts
-          .where((receipt) =>
-              receipt.flowType == MoneyFlowType.expense &&
-              receipt.createdAt.year == date.year &&
-              receipt.createdAt.month == date.month &&
-              receipt.createdAt.day == date.day)
-          .fold<double>(0, (value, receipt) => value + receipt.total);
+          .where(
+            (receipt) =>
+                receipt.flowType == MoneyFlowType.expense &&
+                receipt.createdAt.year == date.year &&
+                receipt.createdAt.month == date.month &&
+                receipt.createdAt.day == date.day,
+          )
+          .fold<double>(
+            0,
+            (value, receipt) =>
+                value + convert(receipt.total, receipt.currency),
+          );
       return _DailyPoint(amount: dayTotal, date: date);
     });
 
