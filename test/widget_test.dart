@@ -9,10 +9,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:spendings_tracking_app/app.dart';
+import 'package:spendings_tracking_app/core/constants/demo_receipts.dart';
+import 'package:spendings_tracking_app/features/receipts/application/receipts_controller.dart';
+import 'package:spendings_tracking_app/features/receipts/domain/models/receipt_models.dart';
 
 void main() {
   testWidgets('Home shell renders overview and receipts tabs', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: SpendingsApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          receiptsProvider.overrideWith(_FakeReceiptsController.new),
+        ],
+        child: const SpendingsApp(),
+      ),
+    );
 
     expect(find.text('Overview'), findsWidgets);
     expect(find.text('Receipts'), findsWidgets);
@@ -23,4 +33,9 @@ void main() {
 
     expect(find.textContaining('Scan receipt'), findsOneWidget);
   });
+}
+
+class _FakeReceiptsController extends ReceiptsController {
+  @override
+  Future<List<Receipt>> build() async => DemoReceipts.initialPool;
 }

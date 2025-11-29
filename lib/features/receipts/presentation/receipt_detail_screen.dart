@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,33 +18,44 @@ class ReceiptDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final receipt = ref.watch(receiptsProvider).firstWhere(
+    final receiptsAsync = ref.watch(receiptsProvider);
+
+    return receiptsAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stackTrace) =>
+          Scaffold(body: Center(child: Text('Failed to load receipt: $error'))),
+      data: (receipts) {
+        final receipt = receipts.firstWhere(
           (item) => item.id == receiptId,
           orElse: () => throw StateError('Receipt not found'),
         );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(receipt.store.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _openEditSheet(context, ref, receipt),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(receipt.store.name),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => _openEditSheet(context, ref, receipt),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _DetailHeader(receipt: receipt),
-          const SizedBox(height: 20),
-          _TotalsCard(receipt: receipt),
-          const SizedBox(height: 20),
-          _LineItemsCard(receipt: receipt),
-          const SizedBox(height: 20),
-          _MetaCard(receipt: receipt),
-        ],
-      ),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              _DetailHeader(receipt: receipt),
+              const SizedBox(height: 20),
+              _TotalsCard(receipt: receipt),
+              const SizedBox(height: 20),
+              _LineItemsCard(receipt: receipt),
+              const SizedBox(height: 20),
+              _MetaCard(receipt: receipt),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -346,7 +360,37 @@ class _MetaCard extends StatelessWidget {
                 title: const Text('Notes'),
                 subtitle: Text(receipt.notes!),
               ),
+            if (receipt.sourceImagePath != null && !kIsWeb)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.image_outlined),
+                title: const Text('Original image'),
+                trailing: TextButton(
+                  onPressed: () =>
+                      _showImagePreview(context, receipt.sourceImagePath!),
+                  child: const Text('View'),
+                ),
+              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showImagePreview(BuildContext context, String path) {
+    final file = File(path);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image not found on device')),
+      );
+      return;
+    }
+    showDialog<void>(
+      context: context,
+      builder: (_) => Dialog(
+        clipBehavior: Clip.hardEdge,
+        child: InteractiveViewer(
+          child: Image.file(file, fit: BoxFit.contain),
         ),
       ),
     );

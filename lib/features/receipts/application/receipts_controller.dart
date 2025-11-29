@@ -1,41 +1,52 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/constants/demo_receipts.dart';
+import '../data/receipt_repository.dart';
 import '../domain/models/receipt_models.dart';
 
 final receiptsProvider =
-    NotifierProvider<ReceiptsController, List<Receipt>>(ReceiptsController.new);
+    AsyncNotifierProvider<ReceiptsController, List<Receipt>>(
+        ReceiptsController.new);
 
-class ReceiptsController extends Notifier<List<Receipt>> {
+class ReceiptsController extends AsyncNotifier<List<Receipt>> {
   ReceiptsController();
 
   final Uuid _uuid = const Uuid();
+  StreamSubscription<List<Receipt>>? _subscription;
+
+  ReceiptRepository get _repository => ref.read(receiptRepositoryProvider);
 
   @override
-  List<Receipt> build() => DemoReceipts.initialPool;
+  Future<List<Receipt>> build() async {
+    final initial = await _repository.getAllReceipts();
+    _subscription?.cancel();
+    _subscription = _repository.watchReceipts().listen((data) {
+      state = AsyncData(data);
+    });
+    ref.onDispose(() => _subscription?.cancel());
+    return initial;
+  }
 
   Receipt? findById(String id) =>
-      state.firstWhereOrNull((receipt) => receipt.id == id);
+      state.asData?.value.firstWhereOrNull((receipt) => receipt.id == id);
 
-  void addReceipt(Receipt receipt) {
-    state = [...state, receipt];
+  Future<void> addReceipt(Receipt receipt) async {
+    await _repository.upsertReceipt(receipt);
   }
 
-  void addFromDraft(ReceiptDraft draft) {
+  Future<void> addFromDraft(ReceiptDraft draft) async {
     final receipt = draft.finalize(id: _uuid.v4());
-    addReceipt(receipt);
+    await addReceipt(receipt);
   }
 
-  void updateReceipt(Receipt updated) {
-    state = [
-      for (final receipt in state)
-        if (receipt.id == updated.id) updated else receipt,
-    ];
+  Future<void> updateReceipt(Receipt updated) async {
+    await _repository.upsertReceipt(updated);
   }
 
-  void deleteReceipt(String id) {
-    state = state.where((receipt) => receipt.id != id).toList(growable: false);
+  Future<void> deleteReceipt(String id) async {
+    await _repository.deleteReceipt(id);
   }
 }

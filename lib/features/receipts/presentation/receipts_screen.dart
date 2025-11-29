@@ -23,46 +23,54 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final receipts = ref.watch(receiptsProvider);
-    final filtered = receipts.where((receipt) {
-      switch (filter) {
-        case _ReceiptFilter.expenses:
-          return receipt.flowType == MoneyFlowType.expense;
-        case _ReceiptFilter.income:
-          return receipt.flowType == MoneyFlowType.income;
-        case _ReceiptFilter.review:
-          return receipt.requiresReview;
-        case _ReceiptFilter.all:
-          return true;
-      }
-    }).where((receipt) {
-      if (query.isEmpty) return true;
-      final normalized = query.toLowerCase();
-      return receipt.store.name.toLowerCase().contains(normalized) ||
-          receipt.items
-              .any((item) => item.name.toLowerCase().contains(normalized));
-    }).toList();
+    final receiptsAsync = ref.watch(receiptsProvider);
 
-    final grouped = filtered
-        .groupListsBy((receipt) => DateUtils.dateOnly(receipt.createdAt));
+    return receiptsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) =>
+          Center(child: Text('Failed to load receipts: $error')),
+      data: (receipts) {
+        final filtered = receipts.where((receipt) {
+          switch (filter) {
+            case _ReceiptFilter.expenses:
+              return receipt.flowType == MoneyFlowType.expense;
+            case _ReceiptFilter.income:
+              return receipt.flowType == MoneyFlowType.income;
+            case _ReceiptFilter.review:
+              return receipt.requiresReview;
+            case _ReceiptFilter.all:
+              return true;
+          }
+        }).where((receipt) {
+          if (query.isEmpty) return true;
+          final normalized = query.toLowerCase();
+          return receipt.store.name.toLowerCase().contains(normalized) ||
+              receipt.items
+                  .any((item) => item.name.toLowerCase().contains(normalized));
+        }).toList();
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-      children: [
-        _buildFilterBar(),
-        const SizedBox(height: 12),
-        _buildSearchField(),
-        const SizedBox(height: 20),
-        if (filtered.isEmpty)
-          const _EmptyState()
-        else
-          ...grouped.entries.sorted((a, b) => b.key.compareTo(a.key)).map(
-                (entry) => _ReceiptDaySection(
-                  date: entry.key,
-                  receipts: entry.value,
-                ),
-              ),
-      ],
+        final grouped = filtered
+            .groupListsBy((receipt) => DateUtils.dateOnly(receipt.createdAt));
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          children: [
+            _buildFilterBar(),
+            const SizedBox(height: 12),
+            _buildSearchField(),
+            const SizedBox(height: 20),
+            if (filtered.isEmpty)
+              const _EmptyState()
+            else
+              ...grouped.entries.sorted((a, b) => b.key.compareTo(a.key)).map(
+                    (entry) => _ReceiptDaySection(
+                      date: entry.key,
+                      receipts: entry.value,
+                    ),
+                  ),
+          ],
+        );
+      },
     );
   }
 

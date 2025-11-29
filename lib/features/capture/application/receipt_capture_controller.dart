@@ -1,17 +1,26 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../services/capture/receipt_capture_service.dart';
 import '../../receipts/application/receipts_controller.dart';
 import '../../receipts/domain/models/receipt_models.dart';
+import '../../settings/application/settings_controller.dart';
 
-final receiptCaptureServiceProvider = Provider<ReceiptCaptureService>(
-  (ref) => ReceiptCaptureService(),
-);
+final receiptCaptureServiceProvider = Provider<ReceiptCaptureService>((ref) {
+  final service = ReceiptCaptureService();
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 final receiptCaptureControllerProvider =
     StateNotifierProvider<ReceiptCaptureController, ReceiptCaptureState>(
   (ref) => ReceiptCaptureController(
+    ref: ref,
     service: ref.watch(receiptCaptureServiceProvider),
     receiptsController: ref.watch(receiptsProvider.notifier),
   ),
@@ -19,19 +28,22 @@ final receiptCaptureControllerProvider =
 
 class ReceiptCaptureController extends StateNotifier<ReceiptCaptureState> {
   ReceiptCaptureController({
+    required this.ref,
     required ReceiptCaptureService service,
     required this.receiptsController,
   })  : _service = service,
         super(const ReceiptCaptureState.idle());
 
+  final Ref ref;
   final ReceiptCaptureService _service;
   final ReceiptsController receiptsController;
+  final Uuid _uuid = const Uuid();
 
   Future<void> captureFromDemo() async {
     state = const ReceiptCaptureState.processing();
     try {
       final draft = await _service.demo();
-      state = ReceiptCaptureState.success(draft);
+      state = ReceiptCaptureState.success(draft, file: null);
     } catch (error) {
       state =
           ReceiptCaptureState.failure('Failed to process demo data: $error');
@@ -42,23 +54,47 @@ class ReceiptCaptureController extends StateNotifier<ReceiptCaptureState> {
     state = ReceiptCaptureState.processing(file: file);
     try {
       final draft = await _service.fromImage(file);
-      state = ReceiptCaptureState.success(draft);
+      state = ReceiptCaptureState.success(draft, file: file);
     } catch (error) {
       state = ReceiptCaptureState.failure('Failed to read receipt: $error');
     }
   }
 
-  void commitDraft() {
-    state.maybeWhen(
-      success: (draft) {
-        receiptsController.addFromDraft(draft);
+  Future<void> commitDraft() async {
+    final current = state;
+    if (current is _CaptureSuccess) {
+      try {
+        final settings = ref.read(settingsControllerProvider);
+        String? imagePath = current.draft.sourceImagePath;
+        if (settings.storeOriginalImages && current.file != null) {
+          imagePath = await _persistImage(current.file!);
+        }
+        if (!settings.storeOriginalImages) {
+          imagePath = null;
+        }
+        final draftToSave = current.draft.copyWith(
+          sourceImagePath: imagePath,
+        );
+        await receiptsController.addFromDraft(draftToSave);
         state = const ReceiptCaptureState.completed();
-      },
-      orElse: () {},
-    );
+      } catch (error) {
+        state = ReceiptCaptureState.failure('Failed to save receipt: $error');
+      }
+    }
   }
 
   void reset() => state = const ReceiptCaptureState.idle();
+
+  Future<String?> _persistImage(XFile file) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final receiptsDir = Directory(p.join(docsDir.path, 'receipts'));
+    await receiptsDir.create(recursive: true);
+    final extension =
+        p.extension(file.path).isEmpty ? '.jpg' : p.extension(file.path);
+    final newPath = p.join(receiptsDir.path, '${_uuid.v4()}$extension');
+    await File(file.path).copy(newPath);
+    return newPath;
+  }
 }
 
 sealed class ReceiptCaptureState {
@@ -69,7 +105,7 @@ sealed class ReceiptCaptureState {
   const factory ReceiptCaptureState.processing({XFile? file}) =
       _CaptureProcessing;
 
-  const factory ReceiptCaptureState.success(ReceiptDraft draft) =
+  const factory ReceiptCaptureState.success(ReceiptDraft draft, {XFile? file}) =
       _CaptureSuccess;
 
   const factory ReceiptCaptureState.failure(String message) = _CaptureFailure;
@@ -79,14 +115,14 @@ sealed class ReceiptCaptureState {
   T? whenOrNull<T>({
     T Function()? idle,
     T Function(XFile? file)? processing,
-    T Function(ReceiptDraft draft)? success,
+    T Function(ReceiptDraft draft, XFile? file)? success,
     T Function(String message)? failure,
     T Function()? completed,
   }) {
     final self = this;
     if (self is _CaptureIdle) return idle?.call();
     if (self is _CaptureProcessing) return processing?.call(self.file);
-    if (self is _CaptureSuccess) return success?.call(self.draft);
+    if (self is _CaptureSuccess) return success?.call(self.draft, self.file);
     if (self is _CaptureFailure) return failure?.call(self.message);
     if (self is _CaptureCompleted) return completed?.call();
     return null;
@@ -95,7 +131,7 @@ sealed class ReceiptCaptureState {
   T maybeWhen<T>({
     T Function()? idle,
     T Function(XFile? file)? processing,
-    T Function(ReceiptDraft draft)? success,
+    T Function(ReceiptDraft draft, XFile? file)? success,
     T Function(String message)? failure,
     T Function()? completed,
     required T Function() orElse,
@@ -122,9 +158,10 @@ class _CaptureProcessing extends ReceiptCaptureState {
 }
 
 class _CaptureSuccess extends ReceiptCaptureState {
-  const _CaptureSuccess(this.draft) : super();
+  const _CaptureSuccess(this.draft, {this.file}) : super();
 
   final ReceiptDraft draft;
+  final XFile? file;
 }
 
 class _CaptureFailure extends ReceiptCaptureState {

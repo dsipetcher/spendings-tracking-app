@@ -37,7 +37,7 @@ class ReceiptCaptureScreen extends ConsumerWidget {
           _CaptureActions(state: state),
           const SizedBox(height: 20),
           state.maybeWhen(
-            success: (draft) => _DraftPreview(draft: draft),
+            success: (draft, _) => _DraftPreview(draft: draft),
             completed: () => const _SuccessMessage(),
             failure: (message) => _ErrorCard(message: message),
             orElse: () => const _HintsCard(),
@@ -56,7 +56,10 @@ class _CaptureHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final processing = state.whenOrNull(processing: (_) => true) ?? false;
-    final file = state.whenOrNull(processing: (file) => file);
+    final previewFile = state.whenOrNull(
+      processing: (file) => file,
+      success: (_, file) => file,
+    );
 
     return Card(
       child: Padding(
@@ -67,11 +70,11 @@ class _CaptureHero extends StatelessWidget {
             Text('Attach receipt',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
-            if (file != null && !kIsWeb)
+            if (previewFile != null && !kIsWeb)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.file(
-                  File(file.path),
+                  File(previewFile.path),
                   height: 180,
                   fit: BoxFit.cover,
                 ),
@@ -116,7 +119,7 @@ class _CaptureActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(receiptCaptureControllerProvider.notifier);
     final picker = ImagePicker();
-    final hasDraft = state.whenOrNull(success: (_) => true) ?? false;
+    final hasDraft = state.whenOrNull(success: (_, __) => true) ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

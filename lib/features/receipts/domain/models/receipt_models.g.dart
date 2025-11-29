@@ -28,6 +28,8 @@ _$ReceiptImpl _$$ReceiptImplFromJson(Map<String, dynamic> json) =>
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.85,
       sourceLanguage: json['sourceLanguage'] as String?,
       translatedLanguage: json['translatedLanguage'] as String?,
+      sourceImagePath: json['sourceImagePath'] as String?,
+      rawText: json['rawText'] as String?,
     );
 
 Map<String, dynamic> _$$ReceiptImplToJson(_$ReceiptImpl instance) =>
@@ -41,8 +43,8 @@ Map<String, dynamic> _$$ReceiptImplToJson(_$ReceiptImpl instance) =>
       'tax': instance.tax,
       'serviceFee': instance.serviceFee,
       'discount': instance.discount,
-      'store': instance.store,
-      'items': instance.items,
+      'store': instance.store.toJson(),
+      'items': instance.items.map((e) => e.toJson()).toList(),
       'paymentMethod': instance.paymentMethod,
       'notes': instance.notes,
       'autoCategorized': instance.autoCategorized,
@@ -50,6 +52,8 @@ Map<String, dynamic> _$$ReceiptImplToJson(_$ReceiptImpl instance) =>
       'confidence': instance.confidence,
       'sourceLanguage': instance.sourceLanguage,
       'translatedLanguage': instance.translatedLanguage,
+      'sourceImagePath': instance.sourceImagePath,
+      'rawText': instance.rawText,
     };
 
 const _$MoneyFlowTypeEnumMap = {
@@ -156,13 +160,15 @@ _$ReceiptDraftImpl _$$ReceiptDraftImplFromJson(Map<String, dynamic> json) =>
       sourceLanguage: json['sourceLanguage'] as String?,
       translatedLanguage: json['translatedLanguage'] as String?,
       requiresReview: json['requiresReview'] as bool? ?? false,
+      sourceImagePath: json['sourceImagePath'] as String?,
+      rawText: json['rawText'] as String?,
     );
 
 Map<String, dynamic> _$$ReceiptDraftImplToJson(_$ReceiptDraftImpl instance) =>
     <String, dynamic>{
-      'store': instance.store,
+      'store': instance.store?.toJson(),
       'createdAt': instance.createdAt?.toIso8601String(),
-      'items': instance.items,
+      'items': instance.items.map((e) => e.toJson()).toList(),
       'currency': instance.currency,
       'flowType': _$MoneyFlowTypeEnumMap[instance.flowType]!,
       'subtotal': instance.subtotal,
@@ -173,4 +179,6 @@ Map<String, dynamic> _$$ReceiptDraftImplToJson(_$ReceiptDraftImpl instance) =>
       'sourceLanguage': instance.sourceLanguage,
       'translatedLanguage': instance.translatedLanguage,
       'requiresReview': instance.requiresReview,
+      'sourceImagePath': instance.sourceImagePath,
+      'rawText': instance.rawText,
     };

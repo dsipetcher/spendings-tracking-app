@@ -2,10 +2,12 @@
 
 A Flutter-based receipt tracking MVP that demonstrates how a mobile client can:
 
-- Capture receipts from the camera or gallery and run OCR/translation pipelines.
+- Capture receipts from the camera or gallery, run Google ML Kit OCR + translation, and attach
+  the source image (optional to save space).
 - Autocomplete store metadata, totals, product line items, and categories with manual override.
+- Persist the ledger locally via Hive and keep every receipt editable offline.
 - Display a dashboard with income vs. expenses, weekly charts, and category highlights.
-- Offer a searchable history, transaction details, and inline editing.
+- Offer a searchable history, transaction details, original-image viewer, and inline editing.
 
 > **Note:** OCR + translation are mocked via `assets/demo/sample_receipt.json`, but the service layer is structured so Google ML Kit / cloud APIs can be plugged in later.
 
@@ -27,6 +29,29 @@ flutter run -d <device_id>
 ```
 
 Ensure Android/iOS toolchains are installed (`flutter doctor`). On Windows, Developer Mode must be enabled for plugin symlinks.
+
+### Environment variables
+
+To enable cloud translation fallback (used when ML Kit lacks a language), provide a Google Cloud
+Translation API key via Dart define:
+
+```powershell
+flutter run --dart-define=TRANSLATE_API_KEY=your_api_key_here
+```
+
+If the key is omitted, the app still works but will skip translation for unsupported languages.
+
+## Feature Highlights
+
+- **Capture → OCR → Translate**: Uses `google_mlkit_text_recognition`, `google_mlkit_language_id`,
+  and `google_mlkit_translation` to extract structured text, detect languages, translate line items,
+  and auto-categorize them.
+- **Local persistence**: Receipts + metadata are stored in a Hive box, so the dashboard and history
+  survive restarts without a backend.
+- **Manual control**: Users can edit merchants, notes, categories, totals, or disable original image
+  storage in Settings to save disk space.
+- **Original image audit**: Every saved operation can link back to the captured photo, viewable from
+  the receipt detail screen if the feature is enabled.
 
 ## Key Packages
 

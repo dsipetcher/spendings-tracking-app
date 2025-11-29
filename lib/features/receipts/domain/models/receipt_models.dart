@@ -21,6 +21,7 @@ enum SpendingCategory {
 
 @freezed
 class Receipt with _$Receipt {
+  @JsonSerializable(explicitToJson: true)
   const factory Receipt({
     required String id,
     required String currency,
@@ -40,6 +41,8 @@ class Receipt with _$Receipt {
     @Default(0.85) double confidence,
     String? sourceLanguage,
     String? translatedLanguage,
+    String? sourceImagePath,
+    String? rawText,
   }) = _Receipt;
 
   factory Receipt.fromJson(Map<String, dynamic> json) =>
@@ -92,6 +95,7 @@ class GeoPoint with _$GeoPoint {
 
 @freezed
 class ReceiptDraft with _$ReceiptDraft {
+  @JsonSerializable(explicitToJson: true)
   const factory ReceiptDraft({
     StoreInfo? store,
     DateTime? createdAt,
@@ -106,6 +110,8 @@ class ReceiptDraft with _$ReceiptDraft {
     String? sourceLanguage,
     String? translatedLanguage,
     @Default(false) bool requiresReview,
+    String? sourceImagePath,
+    String? rawText,
   }) = _ReceiptDraft;
 
   factory ReceiptDraft.fromJson(Map<String, dynamic> json) =>
@@ -140,6 +146,8 @@ extension ReceiptDraftX on ReceiptDraft {
       confidence: items.isEmpty ? 0.5 : 0.85,
       sourceLanguage: sourceLanguage,
       translatedLanguage: translatedLanguage,
+      sourceImagePath: sourceImagePath,
+      rawText: rawText,
       notes: null,
       discount: null,
     );

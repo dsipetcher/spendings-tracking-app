@@ -13,25 +13,33 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final receipts = ref.watch(receiptsProvider);
-    final analytics = _AnalyticsSnapshot.fromReceipts(receipts);
-    final currency = receipts.isEmpty ? 'USD' : receipts.first.currency;
+    final receiptsAsync = ref.watch(receiptsProvider);
 
-    return RefreshIndicator(
-      onRefresh: () async =>
-          Future<void>.delayed(const Duration(milliseconds: 600)),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-        children: [
-          _BalanceCard(analytics: analytics, currency: currency),
-          const SizedBox(height: 20),
-          _WeeklyChart(analytics: analytics, currency: currency),
-          const SizedBox(height: 20),
-          _CategoryHighlights(analytics: analytics, currency: currency),
-          const SizedBox(height: 20),
-          _RecentActivity(receipts: receipts, currency: currency),
-        ],
-      ),
+    return receiptsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) =>
+          Center(child: Text('Failed to load receipts: $error')),
+      data: (receipts) {
+        final analytics = _AnalyticsSnapshot.fromReceipts(receipts);
+        final currency = receipts.isEmpty ? 'USD' : receipts.first.currency;
+
+        return RefreshIndicator(
+          onRefresh: () async =>
+              Future<void>.delayed(const Duration(milliseconds: 600)),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+            children: [
+              _BalanceCard(analytics: analytics, currency: currency),
+              const SizedBox(height: 20),
+              _WeeklyChart(analytics: analytics, currency: currency),
+              const SizedBox(height: 20),
+              _CategoryHighlights(analytics: analytics, currency: currency),
+              const SizedBox(height: 20),
+              _RecentActivity(receipts: receipts, currency: currency),
+            ],
+          ),
+        );
+      },
     );
   }
 }

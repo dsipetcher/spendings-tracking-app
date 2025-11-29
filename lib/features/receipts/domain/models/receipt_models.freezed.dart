@@ -38,6 +38,8 @@ mixin _$Receipt {
   double get confidence => throw _privateConstructorUsedError;
   String? get sourceLanguage => throw _privateConstructorUsedError;
   String? get translatedLanguage => throw _privateConstructorUsedError;
+  String? get sourceImagePath => throw _privateConstructorUsedError;
+  String? get rawText => throw _privateConstructorUsedError;
 
   /// Serializes this Receipt to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -71,7 +73,9 @@ abstract class $ReceiptCopyWith<$Res> {
       bool requiresReview,
       double confidence,
       String? sourceLanguage,
-      String? translatedLanguage});
+      String? translatedLanguage,
+      String? sourceImagePath,
+      String? rawText});
 
   $StoreInfoCopyWith<$Res> get store;
 }
@@ -109,6 +113,8 @@ class _$ReceiptCopyWithImpl<$Res, $Val extends Receipt>
     Object? confidence = null,
     Object? sourceLanguage = freezed,
     Object? translatedLanguage = freezed,
+    Object? sourceImagePath = freezed,
+    Object? rawText = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -183,6 +189,14 @@ class _$ReceiptCopyWithImpl<$Res, $Val extends Receipt>
           ? _value.translatedLanguage
           : translatedLanguage // ignore: cast_nullable_to_non_nullable
               as String?,
+      sourceImagePath: freezed == sourceImagePath
+          ? _value.sourceImagePath
+          : sourceImagePath // ignore: cast_nullable_to_non_nullable
+              as String?,
+      rawText: freezed == rawText
+          ? _value.rawText
+          : rawText // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 
@@ -222,7 +236,9 @@ abstract class _$$ReceiptImplCopyWith<$Res> implements $ReceiptCopyWith<$Res> {
       bool requiresReview,
       double confidence,
       String? sourceLanguage,
-      String? translatedLanguage});
+      String? translatedLanguage,
+      String? sourceImagePath,
+      String? rawText});
 
   @override
   $StoreInfoCopyWith<$Res> get store;
@@ -259,6 +275,8 @@ class __$$ReceiptImplCopyWithImpl<$Res>
     Object? confidence = null,
     Object? sourceLanguage = freezed,
     Object? translatedLanguage = freezed,
+    Object? sourceImagePath = freezed,
+    Object? rawText = freezed,
   }) {
     return _then(_$ReceiptImpl(
       id: null == id
@@ -333,12 +351,21 @@ class __$$ReceiptImplCopyWithImpl<$Res>
           ? _value.translatedLanguage
           : translatedLanguage // ignore: cast_nullable_to_non_nullable
               as String?,
+      sourceImagePath: freezed == sourceImagePath
+          ? _value.sourceImagePath
+          : sourceImagePath // ignore: cast_nullable_to_non_nullable
+              as String?,
+      rawText: freezed == rawText
+          ? _value.rawText
+          : rawText // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
 
 /// @nodoc
-@JsonSerializable()
+
+@JsonSerializable(explicitToJson: true)
 class _$ReceiptImpl implements _Receipt {
   const _$ReceiptImpl(
       {required this.id,
@@ -358,7 +385,9 @@ class _$ReceiptImpl implements _Receipt {
       this.requiresReview = false,
       this.confidence = 0.85,
       this.sourceLanguage,
-      this.translatedLanguage})
+      this.translatedLanguage,
+      this.sourceImagePath,
+      this.rawText})
       : _items = items;
 
   factory _$ReceiptImpl.fromJson(Map<String, dynamic> json) =>
@@ -409,10 +438,14 @@ class _$ReceiptImpl implements _Receipt {
   final String? sourceLanguage;
   @override
   final String? translatedLanguage;
+  @override
+  final String? sourceImagePath;
+  @override
+  final String? rawText;
 
   @override
   String toString() {
-    return 'Receipt(id: $id, currency: $currency, createdAt: $createdAt, flowType: $flowType, total: $total, subtotal: $subtotal, tax: $tax, serviceFee: $serviceFee, discount: $discount, store: $store, items: $items, paymentMethod: $paymentMethod, notes: $notes, autoCategorized: $autoCategorized, requiresReview: $requiresReview, confidence: $confidence, sourceLanguage: $sourceLanguage, translatedLanguage: $translatedLanguage)';
+    return 'Receipt(id: $id, currency: $currency, createdAt: $createdAt, flowType: $flowType, total: $total, subtotal: $subtotal, tax: $tax, serviceFee: $serviceFee, discount: $discount, store: $store, items: $items, paymentMethod: $paymentMethod, notes: $notes, autoCategorized: $autoCategorized, requiresReview: $requiresReview, confidence: $confidence, sourceLanguage: $sourceLanguage, translatedLanguage: $translatedLanguage, sourceImagePath: $sourceImagePath, rawText: $rawText)';
   }
 
   @override
@@ -449,31 +482,37 @@ class _$ReceiptImpl implements _Receipt {
             (identical(other.sourceLanguage, sourceLanguage) ||
                 other.sourceLanguage == sourceLanguage) &&
             (identical(other.translatedLanguage, translatedLanguage) ||
-                other.translatedLanguage == translatedLanguage));
+                other.translatedLanguage == translatedLanguage) &&
+            (identical(other.sourceImagePath, sourceImagePath) ||
+                other.sourceImagePath == sourceImagePath) &&
+            (identical(other.rawText, rawText) || other.rawText == rawText));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      currency,
-      createdAt,
-      flowType,
-      total,
-      subtotal,
-      tax,
-      serviceFee,
-      discount,
-      store,
-      const DeepCollectionEquality().hash(_items),
-      paymentMethod,
-      notes,
-      autoCategorized,
-      requiresReview,
-      confidence,
-      sourceLanguage,
-      translatedLanguage);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        currency,
+        createdAt,
+        flowType,
+        total,
+        subtotal,
+        tax,
+        serviceFee,
+        discount,
+        store,
+        const DeepCollectionEquality().hash(_items),
+        paymentMethod,
+        notes,
+        autoCategorized,
+        requiresReview,
+        confidence,
+        sourceLanguage,
+        translatedLanguage,
+        sourceImagePath,
+        rawText
+      ]);
 
   /// Create a copy of Receipt
   /// with the given fields replaced by the non-null parameter values.
@@ -510,7 +549,9 @@ abstract class _Receipt implements Receipt {
       final bool requiresReview,
       final double confidence,
       final String? sourceLanguage,
-      final String? translatedLanguage}) = _$ReceiptImpl;
+      final String? translatedLanguage,
+      final String? sourceImagePath,
+      final String? rawText}) = _$ReceiptImpl;
 
   factory _Receipt.fromJson(Map<String, dynamic> json) = _$ReceiptImpl.fromJson;
 
@@ -550,6 +591,10 @@ abstract class _Receipt implements Receipt {
   String? get sourceLanguage;
   @override
   String? get translatedLanguage;
+  @override
+  String? get sourceImagePath;
+  @override
+  String? get rawText;
 
   /// Create a copy of Receipt
   /// with the given fields replaced by the non-null parameter values.
@@ -1344,6 +1389,8 @@ mixin _$ReceiptDraft {
   String? get sourceLanguage => throw _privateConstructorUsedError;
   String? get translatedLanguage => throw _privateConstructorUsedError;
   bool get requiresReview => throw _privateConstructorUsedError;
+  String? get sourceImagePath => throw _privateConstructorUsedError;
+  String? get rawText => throw _privateConstructorUsedError;
 
   /// Serializes this ReceiptDraft to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -1374,7 +1421,9 @@ abstract class $ReceiptDraftCopyWith<$Res> {
       String? paymentMethod,
       String? sourceLanguage,
       String? translatedLanguage,
-      bool requiresReview});
+      bool requiresReview,
+      String? sourceImagePath,
+      String? rawText});
 
   $StoreInfoCopyWith<$Res>? get store;
 }
@@ -1407,6 +1456,8 @@ class _$ReceiptDraftCopyWithImpl<$Res, $Val extends ReceiptDraft>
     Object? sourceLanguage = freezed,
     Object? translatedLanguage = freezed,
     Object? requiresReview = null,
+    Object? sourceImagePath = freezed,
+    Object? rawText = freezed,
   }) {
     return _then(_value.copyWith(
       store: freezed == store
@@ -1461,6 +1512,14 @@ class _$ReceiptDraftCopyWithImpl<$Res, $Val extends ReceiptDraft>
           ? _value.requiresReview
           : requiresReview // ignore: cast_nullable_to_non_nullable
               as bool,
+      sourceImagePath: freezed == sourceImagePath
+          ? _value.sourceImagePath
+          : sourceImagePath // ignore: cast_nullable_to_non_nullable
+              as String?,
+      rawText: freezed == rawText
+          ? _value.rawText
+          : rawText // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 
@@ -1500,7 +1559,9 @@ abstract class _$$ReceiptDraftImplCopyWith<$Res>
       String? paymentMethod,
       String? sourceLanguage,
       String? translatedLanguage,
-      bool requiresReview});
+      bool requiresReview,
+      String? sourceImagePath,
+      String? rawText});
 
   @override
   $StoreInfoCopyWith<$Res>? get store;
@@ -1532,6 +1593,8 @@ class __$$ReceiptDraftImplCopyWithImpl<$Res>
     Object? sourceLanguage = freezed,
     Object? translatedLanguage = freezed,
     Object? requiresReview = null,
+    Object? sourceImagePath = freezed,
+    Object? rawText = freezed,
   }) {
     return _then(_$ReceiptDraftImpl(
       store: freezed == store
@@ -1586,12 +1649,21 @@ class __$$ReceiptDraftImplCopyWithImpl<$Res>
           ? _value.requiresReview
           : requiresReview // ignore: cast_nullable_to_non_nullable
               as bool,
+      sourceImagePath: freezed == sourceImagePath
+          ? _value.sourceImagePath
+          : sourceImagePath // ignore: cast_nullable_to_non_nullable
+              as String?,
+      rawText: freezed == rawText
+          ? _value.rawText
+          : rawText // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
 
 /// @nodoc
-@JsonSerializable()
+
+@JsonSerializable(explicitToJson: true)
 class _$ReceiptDraftImpl implements _ReceiptDraft {
   const _$ReceiptDraftImpl(
       {this.store,
@@ -1606,7 +1678,9 @@ class _$ReceiptDraftImpl implements _ReceiptDraft {
       this.paymentMethod,
       this.sourceLanguage,
       this.translatedLanguage,
-      this.requiresReview = false})
+      this.requiresReview = false,
+      this.sourceImagePath,
+      this.rawText})
       : _items = items;
 
   factory _$ReceiptDraftImpl.fromJson(Map<String, dynamic> json) =>
@@ -1648,10 +1722,14 @@ class _$ReceiptDraftImpl implements _ReceiptDraft {
   @override
   @JsonKey()
   final bool requiresReview;
+  @override
+  final String? sourceImagePath;
+  @override
+  final String? rawText;
 
   @override
   String toString() {
-    return 'ReceiptDraft(store: $store, createdAt: $createdAt, items: $items, currency: $currency, flowType: $flowType, subtotal: $subtotal, tax: $tax, serviceFee: $serviceFee, total: $total, paymentMethod: $paymentMethod, sourceLanguage: $sourceLanguage, translatedLanguage: $translatedLanguage, requiresReview: $requiresReview)';
+    return 'ReceiptDraft(store: $store, createdAt: $createdAt, items: $items, currency: $currency, flowType: $flowType, subtotal: $subtotal, tax: $tax, serviceFee: $serviceFee, total: $total, paymentMethod: $paymentMethod, sourceLanguage: $sourceLanguage, translatedLanguage: $translatedLanguage, requiresReview: $requiresReview, sourceImagePath: $sourceImagePath, rawText: $rawText)';
   }
 
   @override
@@ -1680,7 +1758,10 @@ class _$ReceiptDraftImpl implements _ReceiptDraft {
             (identical(other.translatedLanguage, translatedLanguage) ||
                 other.translatedLanguage == translatedLanguage) &&
             (identical(other.requiresReview, requiresReview) ||
-                other.requiresReview == requiresReview));
+                other.requiresReview == requiresReview) &&
+            (identical(other.sourceImagePath, sourceImagePath) ||
+                other.sourceImagePath == sourceImagePath) &&
+            (identical(other.rawText, rawText) || other.rawText == rawText));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1699,7 +1780,9 @@ class _$ReceiptDraftImpl implements _ReceiptDraft {
       paymentMethod,
       sourceLanguage,
       translatedLanguage,
-      requiresReview);
+      requiresReview,
+      sourceImagePath,
+      rawText);
 
   /// Create a copy of ReceiptDraft
   /// with the given fields replaced by the non-null parameter values.
@@ -1731,7 +1814,9 @@ abstract class _ReceiptDraft implements ReceiptDraft {
       final String? paymentMethod,
       final String? sourceLanguage,
       final String? translatedLanguage,
-      final bool requiresReview}) = _$ReceiptDraftImpl;
+      final bool requiresReview,
+      final String? sourceImagePath,
+      final String? rawText}) = _$ReceiptDraftImpl;
 
   factory _ReceiptDraft.fromJson(Map<String, dynamic> json) =
       _$ReceiptDraftImpl.fromJson;
@@ -1762,6 +1847,10 @@ abstract class _ReceiptDraft implements ReceiptDraft {
   String? get translatedLanguage;
   @override
   bool get requiresReview;
+  @override
+  String? get sourceImagePath;
+  @override
+  String? get rawText;
 
   /// Create a copy of ReceiptDraft
   /// with the given fields replaced by the non-null parameter values.

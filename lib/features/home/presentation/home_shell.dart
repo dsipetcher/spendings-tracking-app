@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../dashboard/presentation/dashboard_screen.dart';
 import '../../receipts/presentation/receipts_screen.dart';
 import '../../capture/presentation/receipt_capture_screen.dart';
+import '../../settings/presentation/settings_sheet.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -37,6 +38,14 @@ class _HomeShellState extends State<HomeShell> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => const SettingsSheet(),
+            ),
           ),
         ],
       ),
