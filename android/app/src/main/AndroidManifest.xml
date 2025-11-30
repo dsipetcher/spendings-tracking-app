@@ -41,5 +41,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Разрешаем открывать Google Lens -->
+        <package android:name="com.google.ar.lens" />
+        <!-- Разрешаем открывать приложение Google -->
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <!-- Разрешаем открывать Play Store -->
+        <package android:name="com.android.vending" />
     </queries>
 </manifest>

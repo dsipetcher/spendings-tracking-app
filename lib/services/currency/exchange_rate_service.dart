@@ -53,45 +53,75 @@ class ExchangeRateRepository {
   static const _ttl = Duration(hours: 12);
 
   Future<ExchangeRatesData> getRates(String baseCurrency) async {
-    final prefs = await SharedPreferences.getInstance();
-    final cacheKey = '$_cachePrefix$baseCurrency';
-    final tsKey = '${cacheKey}_ts';
+    // Пытаемся загрузить из кеша, но не падаем, если SharedPreferences недоступен
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheKey = '$_cachePrefix$baseCurrency';
+      final tsKey = '${cacheKey}_ts';
 
-    final cachedJson = prefs.getString(cacheKey);
-    final cachedTs = prefs.getInt(tsKey);
-    if (cachedJson != null && cachedTs != null) {
-      final updatedAt = DateTime.fromMillisecondsSinceEpoch(cachedTs);
-      if (DateTime.now().difference(updatedAt) < _ttl) {
-        final rates = Map<String, double>.from(
-          (jsonDecode(cachedJson) as Map<String, dynamic>)
-              .map((key, value) => MapEntry(key, (value as num).toDouble())),
-        );
-        return ExchangeRatesData(
-          baseCurrency: baseCurrency,
-          rates: rates,
-          updatedAt: updatedAt,
-        );
+      final cachedJson = prefs.getString(cacheKey);
+      final cachedTs = prefs.getInt(tsKey);
+      if (cachedJson != null && cachedTs != null) {
+        final updatedAt = DateTime.fromMillisecondsSinceEpoch(cachedTs);
+        if (DateTime.now().difference(updatedAt) < _ttl) {
+          final rates = Map<String, double>.from(
+            (jsonDecode(cachedJson) as Map<String, dynamic>)
+                .map((key, value) => MapEntry(key, (value as num).toDouble())),
+          );
+          return ExchangeRatesData(
+            baseCurrency: baseCurrency,
+            rates: rates,
+            updatedAt: updatedAt,
+          );
+        }
       }
-    }
 
-    final fetchedRates = await _service.fetchRates(baseCurrency);
-    final now = DateTime.now();
-    final normalized = jsonEncode(fetchedRates);
-    await prefs.setString(cacheKey, normalized);
-    await prefs.setInt(tsKey, now.millisecondsSinceEpoch);
-    return ExchangeRatesData(
-      baseCurrency: baseCurrency,
-      rates: fetchedRates,
-      updatedAt: now,
-    );
+      // Загружаем свежие данные
+      final fetchedRates = await _service.fetchRates(baseCurrency);
+      final now = DateTime.now();
+      
+      // Пытаемся сохранить в кеш, но не падаем при ошибке
+      try {
+        final normalized = jsonEncode(fetchedRates);
+        await prefs.setString(cacheKey, normalized);
+        await prefs.setInt(tsKey, now.millisecondsSinceEpoch);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('⚠️ Failed to cache exchange rates: $e');
+        }
+      }
+      
+      return ExchangeRatesData(
+        baseCurrency: baseCurrency,
+        rates: fetchedRates,
+        updatedAt: now,
+      );
+    } catch (e) {
+      // Если SharedPreferences недоступен, просто загружаем данные без кеша
+      if (kDebugMode) {
+        debugPrint('⚠️ SharedPreferences unavailable, fetching rates without cache: $e');
+      }
+      final fetchedRates = await _service.fetchRates(baseCurrency);
+      return ExchangeRatesData(
+        baseCurrency: baseCurrency,
+        rates: fetchedRates,
+        updatedAt: DateTime.now(),
+      );
+    }
   }
 
   Future<void> clearCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys =
-        prefs.getKeys().where((key) => key.startsWith(_cachePrefix)).toList();
-    for (final key in keys) {
-      await prefs.remove(key);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys =
+          prefs.getKeys().where((key) => key.startsWith(_cachePrefix)).toList();
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Failed to clear cache: $e');
+      }
     }
   }
 }

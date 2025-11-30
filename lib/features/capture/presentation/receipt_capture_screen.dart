@@ -1,11 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'dart:io';
+
 import '../../../core/utils/currency_formatter.dart';
+import '../../../services/capture/google_lens_service.dart';
 import '../../receipts/domain/models/receipt_models.dart';
 import '../application/receipt_capture_controller.dart';
 
@@ -151,6 +152,12 @@ class _CaptureActions extends ConsumerWidget {
           icon: const Icon(Icons.auto_awesome),
           label: const Text('Use demo receipt'),
         ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _showGoogleLensDialog(context, ref),
+          icon: const Icon(Icons.translate),
+          label: const Text('Google Lens (перевод)'),
+        ),
         if (hasDraft)
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -276,6 +283,123 @@ class _SuccessMessage extends StatelessWidget {
         const Text('Receipt saved!'),
         const Text('You can find it in the receipts tab.'),
       ],
+    );
+  }
+}
+
+/// Показывает диалог для работы с Google Lens
+Future<void> _showGoogleLensDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final controller = ref.read(receiptCaptureControllerProvider.notifier);
+  final lensService = GoogleLensService();
+  final textController = TextEditingController();
+
+  // Сначала выбираем изображение
+  final picker = ImagePicker();
+  final image = await picker.pickImage(source: ImageSource.gallery);
+  
+  if (image == null) return;
+
+  // Показываем диалог с инструкциями
+  if (context.mounted) {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Google Lens - Перевод чека'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Инструкция:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text('1. Нажмите "Открыть Google Lens"'),
+              const Text('2. В Google Lens выберите изображение чека'),
+              const Text('3. Переведите текст на нужный язык'),
+              const Text('4. Скопируйте переведённый текст'),
+              const Text('5. Вставьте текст в поле ниже'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: textController,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  hintText: 'Вставьте переведённый текст из Google Lens...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              // Пытаемся открыть Google Lens
+              if (kDebugMode) {
+                debugPrint('🔍 Попытка открыть Google Lens...');
+              }
+              final opened = await lensService.tryOpenLens();
+              if (opened) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Google Lens открыт'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Не удалось открыть Google Lens автоматически.\n'
+                      'Пожалуйста, откройте приложение Google Lens вручную '
+                      'или установите его из Play Store.',
+                    ),
+                    duration: Duration(seconds: 4),
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Открыть Google Lens'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final text = textController.text.trim();
+              if (text.isNotEmpty) {
+                if (kDebugMode) {
+                  debugPrint('📝 Обработка текста из Google Lens (${text.length} символов)');
+                }
+                // Закрываем диалог перед обработкой
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+                // Обрабатываем текст
+                await controller.parseFromText(text, imageFile: image);
+                if (kDebugMode) {
+                  debugPrint('✅ Текст обработан');
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Пожалуйста, вставьте переведённый текст'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Обработать текст'),
+          ),
+        ],
+      ),
     );
   }
 }

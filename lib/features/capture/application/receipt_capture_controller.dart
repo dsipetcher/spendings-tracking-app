@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -7,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../services/capture/receipt_capture_service.dart';
+import '../../../services/receipt/receipt_scanning_service.dart';
 import '../../receipts/application/receipts_controller.dart';
 import '../../receipts/domain/models/receipt_models.dart';
 import '../../settings/application/settings_controller.dart';
@@ -38,6 +40,7 @@ class ReceiptCaptureController extends StateNotifier<ReceiptCaptureState> {
   final ReceiptCaptureService _service;
   final ReceiptsController receiptsController;
   final Uuid _uuid = const Uuid();
+  final ReceiptScanningService _scanningService = ReceiptScanningService();
 
   Future<void> captureFromDemo() async {
     state = const ReceiptCaptureState.processing();
@@ -81,6 +84,37 @@ class ReceiptCaptureController extends StateNotifier<ReceiptCaptureState> {
         state = ReceiptCaptureState.failure('Failed to save receipt: $error');
       }
     }
+  }
+
+  /// Парсит переведённый текст из Google Lens
+  /// 
+  /// [text] - переведённый текст чека из Google Lens
+  /// [imageFile] - опциональный файл изображения (для сохранения)
+  Future<void> parseFromText(String text, {XFile? imageFile}) async {
+    if (text.trim().isEmpty) {
+      state = const ReceiptCaptureState.failure('Текст не может быть пустым');
+      return;
+    }
+
+    state = ReceiptCaptureState.processing(file: imageFile);
+    
+    // Используем Future.microtask для асинхронной обработки
+    await Future.microtask(() {
+      try {
+        final draft = _scanningService.parseReceiptText(
+          text: text,
+          imagePath: imageFile?.path,
+        );
+        state = ReceiptCaptureState.success(draft, file: imageFile);
+      } catch (error, stackTrace) {
+        // Логируем ошибку для отладки
+        debugPrint('❌ Ошибка при парсинге текста из Google Lens: $error');
+        debugPrint('Stack trace: $stackTrace');
+        state = ReceiptCaptureState.failure(
+          'Не удалось распарсить текст: ${error.toString()}',
+        );
+      }
+    });
   }
 
   void reset() => state = const ReceiptCaptureState.idle();

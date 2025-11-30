@@ -72,7 +72,7 @@ class ReceiptRepository {
     final receipts = box.values
         .map(
           (entry) => Receipt.fromJson(
-            Map<String, dynamic>.from(entry),
+            jsonDecode(jsonEncode(entry)) as Map<String, dynamic>,
           ),
         )
         .toList();
